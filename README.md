@@ -9,3 +9,4 @@ skills with Rust.
 - Draw different shapes: Triangles, Circles, Lines...
 - Add transparency
 - Add textures
+- Refactor code into library
