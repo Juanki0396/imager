@@ -6,7 +6,6 @@ skills with Rust.
 ## Planning
 
 - Load ppm images
-- Draw different shapes: Triangles, Circles, Lines...
 - Add transparency
 - Add textures
 - Refactor code into library

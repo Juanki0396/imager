@@ -15,9 +15,12 @@ fn main() {
         eprintln!("ERROR: Invalid path {img_path:?}");
         return;
     }
+    img.draw(Figures::new_triangle(0, 100, 200, 0, 200, 200), BLUE | GREEN);
     img.draw(Figures::new_rectangle(50, 90, 50, 200), GREEN);
     img.draw(Figures::new_circle(100, 100, 50), RED);
     img.draw(Figures::new_line(0, 0, 200, 200), BLUE);
+    img.draw(Figures::new_line(100, 0, 100, 200), BLUE);
+    img.draw(Figures::new_line(0, 100, 200, 100), BLUE);
     if let Err(_) = img.save_to_ppm(&img_path) {
         eprintln!("ERROR: Cannot save image into path");
     }
@@ -28,6 +31,48 @@ fn main() {
 struct Point {
     x: usize,
     y: usize,
+}
+
+impl Point {
+    fn new(x: usize, y: usize) -> Self {
+        Point { x , y }
+    }
+
+    fn sort(self, p: Self) -> (Point, Point) {
+         if self.y < p.y {
+            (self, p)
+        } else if self.y > p.y {
+            (p, self)
+        } else if self.x < p.x {
+            (self, p)
+        } else {
+            (p, self)
+        }
+    }
+
+    fn lerp_y(&self, p: &Self, x: usize) -> Option<usize> {
+        if self.x == p.x {
+            None
+        } else {
+            let dx = self.x as i32 - p.x as i32;
+            let dy = self.y as i32 - p.y as i32 ;
+            let m = dy as f64 / dx as f64;
+            let y = ((m * x as f64) as i32 - p.x as i32 + p.y as i32) as usize;
+            Some(y)
+        }
+    }
+
+    fn lerp_x(&self, p: &Self, y: usize) -> Option<usize> {
+        if self.y == p.y {
+            None
+        } else {
+            let dx = self.x as i32 - p.x as i32;
+            let dy = self.y as i32 - p.y as i32 ;
+            let m = dy as f64 / dx as f64;
+            let x = (((y as i32 - p.y as i32) as f64 / m) as i32 + p.x as i32) as usize;
+            Some(x)
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -49,21 +94,21 @@ impl Figures {
        Self::Rectangle(
            Point { x, y }, 
            Dims { width, height },
-           )
+           ).sort_points()
    }
 
    fn new_circle(x: usize, y:usize, r: usize) -> Self {
        Self::Circle(
            Point { x , y }, 
            r
-           )
+           ).sort_points()
    }
 
    fn new_line(x1: usize, y1:usize, x2: usize, y2: usize) -> Self {
         Self::Line(
             Point { x: x1, y: y1 },
             Point { x: x2, y: y2 },
-            )
+            ).sort_points()
    }
 
    fn new_triangle(x1: usize, y1:usize, x2: usize, y2: usize, x3: usize, y3: usize) -> Self {
@@ -71,7 +116,24 @@ impl Figures {
             Point { x: x1, y: y1 },
             Point { x: x2, y: y2 },
             Point { x: x3, y: y3 },
-            )
+            ).sort_points()
+   }
+
+   fn sort_points(self) -> Self {
+       match self {
+           Self::Line(p1,p2) => {
+               let (p1, p2) = p1.sort(p2);
+               Self::Line(p1, p2)
+           },
+           Self::Circle(_,_) => self,
+           Self::Rectangle(_,_) => self,
+           Self::Triangle(p1,p2,p3) => {
+               let (p1, p2) = p1.sort(p2);
+               let (p2, p3) = p2.sort(p3);
+               let (p1, p2) = p1.sort(p2);
+               Self::Triangle(p1, p2, p3)
+           },
+       }
    }
 }
 
@@ -147,21 +209,72 @@ impl Canvas {
             },
 
             Figures::Line(p1, p2) => {
-                let (p1, p2) = if p1.x < p2.x { (p1,p2) } else { (p2, p1) };
+                let (p1, p2) = p1.sort(p2);
                 let (x1, y1) = (p1.x as i32, p1.y as i32);
                 let (x2, y2) = (p2.x as i32, p2.y as i32);
-                let m: f64 = (y2 - y1) as f64 / (x2 - x1) as f64;
-                for (i, pix) in self.pixels.iter_mut().enumerate() {
-                    let row = i as i32 / self.width as i32;
-                    let column = i as i32 % self.width as i32;
-                    if (column < x1 || column > x2) || (row < y1 || row > y2) { continue } 
-                    if (row - y1) == (m * ( column - x1 ) as f64) as i32 {
-                        *pix = color;
+                if x1 == x2 {
+                    for (i, pix) in self.pixels.iter_mut().enumerate() {
+                        let row = i as i32 / self.width as i32;
+                        let column = i as i32 % self.width as i32;
+                        if ( column == x1) && (row >= y1 && row <= y2) { 
+                            println!("Row: {}; Column: {} and x1: {} and x2: {}", row, column, x1, x2);
+                            *pix = color;
+                        }
+                    }
+                } else {
+                    let m: f64 = (y2 - y1) as f64 / (x2 - x1) as f64;
+                    for (i, pix) in self.pixels.iter_mut().enumerate() {
+                        let row = i as i32 / self.width as i32;
+                        let column = i as i32 % self.width as i32;
+                        if (column < x1 || column > x2) || (row < y1 || row > y2) { continue } 
+                        if (row - y1) == (m * ( column - x1 ) as f64) as i32 {
+                            *pix = color;
+                        }
                     }
                 }
             },
-            Figures::Triangle(p1, p2, p3) => todo!(),
-            _ => todo!(),
+
+            Figures::Triangle(p1, p2, p3) => {
+               let (p1, p2) = p1.sort(p2);
+               let (p2, p3) = p2.sort(p3);
+               let (p1, p2) = p1.sort(p2);
+               let max_y = p1.y.max(p2.y).max(p3.y) as i32;
+               let min_y = p1.y.min(p2.y).min(p3.y) as i32;
+               if p1.y == p2.y && p2.y == p3.y { 
+                   self.draw(Figures::Line(p1,p3), color);
+                   return;
+               }
+               if p1.y == p2.y {
+                    for (i, pix) in self.pixels.iter_mut().enumerate() {
+                        let row = i as i32 / self.width as i32;
+                        let column = i as i32 % self.width as i32;
+                        if  row < min_y && row > max_y {
+                            continue;
+                        }
+                        if p1.lerp_x(&p3, row as usize).unwrap_or(p1.x) <= column as usize
+                            && p2.lerp_x(&p3, row as usize).unwrap_or(p2.x) >= column as usize {
+                            *pix = color;
+                        }
+                    }
+                } else {
+                    let p4 = Point::new(p1.lerp_x(&p3, p2.y).unwrap_or(p1.x), p2.y);
+                    for (i, pix) in self.pixels.iter_mut().enumerate() {
+                        let row = i as i32 / self.width as i32;
+                        let column = i as i32 % self.width as i32;
+                        if  row < min_y && row > max_y {
+                            continue;
+                        }
+                        if p1.lerp_x(&p2, row as usize).unwrap_or(p1.x) <= column as usize
+                            && p1.lerp_x(&p4, row as usize).unwrap_or(p1.x) >= column as usize {
+                            *pix = color;
+                        } else if p2.lerp_x(&p3, row as usize).unwrap_or(p2.x) <= column as usize
+                            && p4.lerp_x(&p3, row as usize).unwrap_or(p4.x) >= column as usize {
+                            *pix = color;
+                        }
+                    }
+               }
+            }
+            _ => unimplemented!(),
         }
     }
 
