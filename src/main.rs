@@ -3,7 +3,7 @@ use std::io::{LineWriter, Write};
 
 const HEIGHT: usize = 264;
 const WIDTH: usize = 264;
-const BACKGROUND_COLOR: u32 = 0xFF000000;
+const BACKGROUND_COLOR: u32 = 0xFF333333;
 const RED: u32 = 0xFF0000FF;
 const GREEN: u32 = 0xFF00FF00;
 const BLUE: u32 = 0xFFFF0000;
@@ -17,6 +17,7 @@ fn main() {
     }
     img.draw(Figures::new_rectangle(50, 90, 50, 200), GREEN);
     img.draw(Figures::new_circle(100, 100, 50), RED);
+    img.draw(Figures::new_line(0, 0, 200, 200), BLUE);
     if let Err(_) = img.save_to_ppm(&img_path) {
         eprintln!("ERROR: Cannot save image into path");
     }
@@ -56,6 +57,21 @@ impl Figures {
            Point { x , y }, 
            r
            )
+   }
+
+   fn new_line(x1: usize, y1:usize, x2: usize, y2: usize) -> Self {
+        Self::Line(
+            Point { x: x1, y: y1 },
+            Point { x: x2, y: y2 },
+            )
+   }
+
+   fn new_triangle(x1: usize, y1:usize, x2: usize, y2: usize, x3: usize, y3: usize) -> Self {
+        Self::Triangle(
+            Point { x: x1, y: y1 },
+            Point { x: x2, y: y2 },
+            Point { x: x3, y: y3 },
+            )
    }
 }
 
@@ -130,7 +146,20 @@ impl Canvas {
                 }
             },
 
-            Figures::Line(p1, p2) => todo!(),
+            Figures::Line(p1, p2) => {
+                let (p1, p2) = if p1.x < p2.x { (p1,p2) } else { (p2, p1) };
+                let (x1, y1) = (p1.x as i32, p1.y as i32);
+                let (x2, y2) = (p2.x as i32, p2.y as i32);
+                let m: f64 = (y2 - y1) as f64 / (x2 - x1) as f64;
+                for (i, pix) in self.pixels.iter_mut().enumerate() {
+                    let row = i as i32 / self.width as i32;
+                    let column = i as i32 % self.width as i32;
+                    if (column < x1 || column > x2) || (row < y1 || row > y2) { continue } 
+                    if (row - y1) == (m * ( column - x1 ) as f64) as i32 {
+                        *pix = color;
+                    }
+                }
+            },
             Figures::Triangle(p1, p2, p3) => todo!(),
             _ => todo!(),
         }
