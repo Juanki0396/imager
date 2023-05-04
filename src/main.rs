@@ -15,8 +15,8 @@ fn main() {
         eprintln!("ERROR: Invalid path {img_path:?}");
         return;
     }
-    img.fill(BLUE);
-    img.draw(Figures::new_rectangle(50, 50, 50, 50), GREEN);
+    img.draw(Figures::new_rectangle(50, 90, 50, 200), GREEN);
+    img.draw(Figures::new_circle(100, 100, 50), RED);
     if let Err(_) = img.save_to_ppm(&img_path) {
         eprintln!("ERROR: Cannot save image into path");
     }
@@ -48,6 +48,13 @@ impl Figures {
        Self::Rectangle(
            Point { x, y }, 
            Dims { width, height },
+           )
+   }
+
+   fn new_circle(x: usize, y:usize, r: usize) -> Self {
+       Self::Circle(
+           Point { x , y }, 
+           r
            )
    }
 }
@@ -113,7 +120,16 @@ impl Canvas {
                     }
                 }
             },
-            Figures::Circle(p, r) => todo!(),
+            Figures::Circle(p, r) => {
+                for (i, pix) in self.pixels.iter_mut().enumerate() {
+                    let row = i / self.width;
+                    let column = i % self.width;
+                    if column.abs_diff(p.x).pow(2) + row.abs_diff(p.y).pow(2) <= r {
+                        *pix = color;
+                    }
+                }
+            },
+
             Figures::Line(p1, p2) => todo!(),
             Figures::Triangle(p1, p2, p3) => todo!(),
             _ => todo!(),
