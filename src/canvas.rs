@@ -33,14 +33,14 @@ impl Canvas {
         (self.height, self.height)
     }
 
-    fn fill(&mut self, color: u32) {
+    pub fn fill(&mut self, color: u32) {
         self.pixels.fill(color)
     }
 
     pub fn save_to_ppm(&self, img_path: &path::Path) -> io::Result<()> {
         let img_file = fs::File::create(img_path)?;
         let mut img_file = LineWriter::new(img_file);
-        img_file.write_all(format!("P3\n{} {}\n255\n", self.height, self.width).as_bytes())?;
+        img_file.write_all(format!("P3\n{} {}\n255\n", self.width, self.height).as_bytes())?;
         for c in self.pixels.chunks(70) {
             let line: String = c.iter().map(|p| Canvas::pix_to_ppm(p.clone())).reduce(|a,s| format!("{a}{s}")).unwrap();
             img_file.write_all(format!("{line}\n").as_bytes())?;
@@ -70,7 +70,7 @@ impl Canvas {
                 for (i, pix) in self.pixels.iter_mut().enumerate() {
                     let row = i / self.width;
                     let column = i % self.width;
-                    if column.abs_diff(p.x()).pow(2) + row.abs_diff(p.y()).pow(2) <= r {
+                    if column.abs_diff(p.x()).pow(2) + row.abs_diff(p.y()).pow(2) <= r.pow(2) {
                         *pix = color;
                     }
                 }

@@ -8,3 +8,7 @@ skills with Rust.
 - Load ppm images
 - Add transparency
 - Add textures
+- Optimize rendering
+- Adding antialias
+- Add suport for png images
+- Add parsing file with drawing discussion

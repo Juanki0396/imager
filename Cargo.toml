@@ -8,9 +8,12 @@ name = "imager"
 path = "src/lib.rs"
 
 [[bin]]
-name = "imager"
-path = "src/main.rs"
+name = "draw"
+path = "src/bin/draw.rs"
 
+[[bin]]
+name = "example"
+path = "src/bin/example.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
