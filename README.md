@@ -8,4 +8,3 @@ skills with Rust.
 - Load ppm images
 - Add transparency
 - Add textures
-- Refactor code into library
